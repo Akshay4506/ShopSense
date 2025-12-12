@@ -5,9 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useSpeechRecognition, INDIAN_LANGUAGES } from "@/hooks/useSpeechRecognition";
 import { Store, ArrowLeft, Plus, Trash2, Printer, Mic, MicOff, Loader2 } from "lucide-react";
 
 interface InventoryItem {
@@ -48,14 +55,16 @@ export default function Billing() {
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingBill, setIsGeneratingBill] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState("hi-IN");
 
-  const { isListening, isSupported, startListening } = useSpeechRecognition({
+  const { isListening, isSupported, isModelLoading, startListening, stopListening } = useSpeechRecognition({
+    language: selectedLanguage,
     onResult: (transcript) => {
       setInputValue(transcript);
-      toast({
-        title: "Voice captured",
-        description: transcript,
-      });
+      // Auto-add item when final result is received (min 3 characters to avoid noise)
+      if (transcript && transcript.trim().length > 3 && handleAddItemFromVoice.current) {
+        handleAddItemFromVoice.current(transcript.trim());
+      }
     },
     onError: (error) => {
       toast({
@@ -95,6 +104,94 @@ export default function Billing() {
       .maybeSingle();
     setProfile(data);
   };
+
+  const handleAddItemFromVoice = useRef<(voiceInput: string) => void>();
+
+  useEffect(() => {
+    handleAddItemFromVoice.current = async (voiceInput: string) => {
+      if (!voiceInput.trim()) return;
+
+      try {
+        console.log("Voice input received:", voiceInput);
+        
+        const { data, error } = await supabase.functions.invoke("parse-item", {
+          body: { input: voiceInput, inventory }
+        });
+
+        if (error) {
+          console.error("Parse error:", error);
+          return;
+        }
+
+        console.log("Parse result:", data);
+
+        if (data.error && !data.found) {
+          // Silently skip if item not found during voice recognition
+          console.log("Item not found in inventory");
+          return;
+        }
+
+        // Find matching inventory item
+        const matchedItem = inventory.find(
+          item => item.item_name.toLowerCase() === data.item_name.toLowerCase()
+        );
+
+        if (!matchedItem || matchedItem.quantity === 0) {
+          // Skip out of stock items silently during voice input
+          console.log("Item not in stock or not found");
+          return;
+        }
+
+        console.log("Adding to cart:", matchedItem.item_name, data.quantity);
+
+        // Check if item already in cart
+        const existingIndex = cart.findIndex(item => item.inventory_id === matchedItem.id);
+
+        if (existingIndex >= 0) {
+          // Update quantity
+          const newCart = [...cart];
+          const newQty = newCart[existingIndex].quantity + data.quantity;
+
+          if (newQty > matchedItem.quantity) {
+            // Silently cap to available quantity
+            newCart[existingIndex].quantity = matchedItem.quantity;
+          } else {
+            newCart[existingIndex].quantity = newQty;
+          }
+
+          setCart(newCart);
+        } else {
+          // Add new item
+          if (data.quantity > matchedItem.quantity) {
+            // Cap quantity to available stock
+            data.quantity = matchedItem.quantity;
+          }
+
+          setCart([...cart, {
+            inventory_id: matchedItem.id,
+            item_name: matchedItem.item_name,
+            quantity: data.quantity,
+            unit: matchedItem.unit,
+            cost_price: matchedItem.cost_price,
+            selling_price: matchedItem.selling_price,
+            available_stock: matchedItem.quantity,
+          }]);
+        }
+
+        // Show brief notification
+        toast({
+          title: "Added to cart",
+          description: `${data.quantity} ${matchedItem.unit} ${matchedItem.item_name}`,
+          duration: 2000,
+        });
+
+        // Clear input for next voice command
+        setInputValue("");
+      } catch (error) {
+        console.error("Error adding item from voice:", error);
+      }
+    };
+  }, [inventory, cart, toast]);
 
   const handleAddItem = async () => {
     if (!inputValue.trim()) return;
@@ -416,6 +513,23 @@ export default function Billing() {
       </header>
 
       <main className="flex-1 container mx-auto px-4 py-6 flex flex-col">
+        {/* Language Selection */}
+        <div className="mb-4 flex items-center gap-2">
+          <label className="text-sm font-medium">Language:</label>
+          <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {INDIAN_LANGUAGES.map((lang) => (
+                <SelectItem key={lang.code} value={lang.code}>
+                  {lang.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Input Section */}
         <Card className="mb-4">
           <CardHeader className="pb-2">
@@ -436,11 +550,14 @@ export default function Billing() {
                 <Button 
                   variant={isListening ? "destructive" : "outline"}
                   size="icon"
-                  onClick={startListening}
-                  disabled={isProcessing || isListening}
+                  onClick={isListening ? stopListening : startListening}
+                  disabled={isProcessing || isModelLoading}
+                  title={isModelLoading ? "Loading speech model..." : ""}
                 >
                   {isListening ? (
                     <MicOff className="h-4 w-4 animate-pulse" />
+                  ) : isModelLoading ? (
+                    <Mic className="h-4 w-4 opacity-50" />
                   ) : (
                     <Mic className="h-4 w-4" />
                   )}
