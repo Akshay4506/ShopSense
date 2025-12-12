@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
-import { Store, ArrowLeft, Plus, Search, Edit2, Trash2, AlertTriangle } from "lucide-react";
+import { useSpeechRecognition, INDIAN_LANGUAGES } from "@/hooks/useSpeechRecognition";
+import { Store, ArrowLeft, Plus, Search, Edit2, Trash2, AlertTriangle, Mic, MicOff } from "lucide-react";
 
 interface InventoryItem {
   id: string;
@@ -40,6 +41,26 @@ export default function Inventory() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const [selectedLanguage, setSelectedLanguage] = useState("hi-IN");
+
+  const { isListening, isSupported, isModelLoading, startListening, stopListening } = useSpeechRecognition({
+    language: selectedLanguage,
+    onResult: (transcript) => {
+      setSearchQuery(transcript);
+      toast({
+        title: "Voice search",
+        description: `Searching for: ${transcript}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Voice search error",
+        description: error,
+        variant: "destructive",
+      });
+    },
+  });
 
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -221,6 +242,23 @@ export default function Inventory() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
+        {/* Language Selection */}
+        <div className="mb-4 flex items-center gap-2">
+          <label className="text-sm font-medium">Language:</label>
+          <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {INDIAN_LANGUAGES.map((lang) => (
+                <SelectItem key={lang.code} value={lang.code}>
+                  {lang.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -228,8 +266,26 @@ export default function Inventory() {
               placeholder="Search items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-12"
             />
+            {isSupported && (
+              <Button
+                variant={isListening ? "destructive" : "ghost"}
+                size="sm"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                onClick={isListening ? stopListening : startListening}
+                disabled={isModelLoading}
+                title={isModelLoading ? "Loading speech model..." : ""}
+              >
+                {isListening ? (
+                  <MicOff className="h-4 w-4 animate-pulse" />
+                ) : isModelLoading ? (
+                  <Mic className="h-4 w-4 opacity-50" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
+            )}
           </div>
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>

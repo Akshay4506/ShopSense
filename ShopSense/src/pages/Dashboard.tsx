@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Store, Package, Receipt, Calendar, BarChart3, History, LogOut, AlertTriangle } from "lucide-react";
+import { Store, Package, Receipt, Calendar, BarChart3, History, AlertTriangle } from "lucide-react";
+import { UserProfile } from "@/components/UserProfile";
 
 interface Profile {
   shopkeeper_name: string;
@@ -22,7 +23,7 @@ interface InventoryStats {
 }
 
 export default function Dashboard() {
-  const { user, signOut, loading } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<InventoryStats>({
@@ -73,10 +74,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
+
 
   if (loading) {
     return (
@@ -96,9 +94,10 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button variant="ghost" size="icon" onClick={handleSignOut}>
-              <LogOut className="h-5 w-5" />
-            </Button>
+            <UserProfile
+              initialProfile={profile}
+              onProfileUpdate={setProfile}
+            />
           </div>
         </div>
       </header>
@@ -150,7 +149,7 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <Card 
+          <Card
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={() => navigate("/inventory")}
           >
@@ -165,7 +164,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card 
+          <Card
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={() => navigate("/billing")}
           >
@@ -180,7 +179,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card 
+          <Card
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={() => navigate("/daily-operations")}
           >
@@ -195,7 +194,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card 
+          <Card
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={() => navigate("/reports")}
           >
@@ -210,7 +209,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card 
+          <Card
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={() => navigate("/bill-history")}
           >
