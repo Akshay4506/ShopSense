@@ -1,4 +1,4 @@
-# ShopIQ
+# ShopSense
 
 Smart Dukaan Management - Track inventory, create bills, and grow your business.
 
@@ -19,7 +19,7 @@ A modern web application for managing kirana stores, built with React, TypeScrip
 git clone <YOUR_GIT_URL>
 
 # Navigate to the project directory
-cd ShopIQ
+cd ShopSense
 
 # Install dependencies
 npm install

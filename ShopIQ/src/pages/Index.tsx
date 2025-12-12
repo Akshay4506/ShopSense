@@ -29,7 +29,7 @@ export default function Index() {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Store className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">ShopIQ</span>
+            <span className="text-2xl font-bold text-foreground">ShopSense</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -110,7 +110,7 @@ export default function Index() {
               Ready to Grow Your Business?
             </h2>
             <p className="text-muted-foreground mb-6">
-              Join thousands of shopkeepers already using ShopIQ.
+              Join thousands of shopkeepers already using ShopSense.
             </p>
             <Button size="lg" onClick={() => navigate("/auth")}>
               Start Free Today
@@ -121,7 +121,7 @@ export default function Index() {
 
       <footer className="border-t border-border py-6 px-4">
         <div className="container mx-auto text-center text-muted-foreground text-sm">
-          © 2024 ShopIQ. Made with ❤️ for Indian shopkeepers.
+          © 2024 ShopSense. Made with ❤️ for Indian shopkeepers.
         </div>
       </footer>
     </div>

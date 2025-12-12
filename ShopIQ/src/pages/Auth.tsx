@@ -108,7 +108,7 @@ export default function Auth() {
 
     toast({
       title: "Account Created!",
-      description: "Welcome to ShopIQ. You can now manage your shop.",
+      description: "Welcome to ShopSense. You can now manage your shop.",
     });
     navigate("/dashboard");
     setIsLoading(false);
@@ -119,7 +119,7 @@ export default function Auth() {
       <header className="flex justify-between items-center p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <Store className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold text-foreground">ShopIQ</span>
+          <span className="text-2xl font-bold text-foreground">ShopSense</span>
         </div>
         <ThemeToggle />
       </header>
@@ -127,7 +127,7 @@ export default function Auth() {
       <main className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Welcome to ShopIQ</CardTitle>
+            <CardTitle className="text-2xl">Welcome to ShopSense</CardTitle>
             <CardDescription>
               Smart Dukaan Management System
             </CardDescription>

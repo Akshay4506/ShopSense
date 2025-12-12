@@ -302,7 +302,7 @@ export default function Reports() {
         </table>
         
         <div class="footer">
-          Generated on ${new Date().toLocaleDateString("en-IN")} | ShopIQ - Smart Dukaan Management
+          Generated on ${new Date().toLocaleDateString("en-IN")} | ShopSense - Smart Dukaan Management
         </div>
       </body>
       </html>
