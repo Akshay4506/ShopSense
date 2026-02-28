@@ -1,4 +1,4 @@
-# ShopSense_WHackiest
+# ShopSense
 
 ## Project Overview
 
