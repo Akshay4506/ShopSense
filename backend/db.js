@@ -1,17 +1,15 @@
-const { Pool } = require('pg');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
-if (!process.env.DATABASE_URL) {
-    console.error("CRITICAL ERROR: DATABASE_URL is missing from environment variables.");
-    console.error("Please ensure backend/.env exists and contains DATABASE_URL.");
-} else {
-    console.log("Database connection initialized with URL length:", process.env.DATABASE_URL.length);
-}
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shopsense-dukaan';
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-});
+mongoose.connect(MONGODB_URI)
+    .then(() => {
+        console.log("Successfully connected to MongoDB:", MONGODB_URI);
+    })
+    .catch((err) => {
+        console.error("CRITICAL ERROR: Failed to connect to MongoDB", err);
+        process.exit(1);
+    });
 
-module.exports = {
-    query: (text, params) => pool.query(text, params),
-};
+module.exports = mongoose;

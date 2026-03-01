@@ -2,9 +2,8 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const User = require('../models/User');
 const nodemailer = require('nodemailer');
-const { v4: uuidv4 } = require('uuid');
 
 // Email Transporter (Configure with your credentials)
 const transporter = nodemailer.createTransport({
@@ -21,8 +20,8 @@ router.post('/register', async (req, res) => {
 
     try {
         // Check if user exists
-        const userExist = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userExist.rows.length > 0) {
+        const userExist = await User.findOne({ email });
+        if (userExist) {
             return res.status(400).json({ error: 'User already exists' });
         }
 
@@ -30,19 +29,21 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Generate ID
-        const id = uuidv4();
-
         // Insert user
-        const newUser = await db.query(
-            'INSERT INTO users (id, email, password_hash, shopkeeper_name, shop_name, shop_address, phone) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, email, shopkeeper_name',
-            [id, email, hashedPassword, shopkeeper_name, shop_name, address, phone]
-        );
+        const newUser = new User({
+            email,
+            password: hashedPassword,
+            shopkeeper_name,
+            shop_name,
+            shop_address: address,
+            phone
+        });
+        await newUser.save();
 
         // Generate Token
-        const token = jwt.sign({ id: newUser.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
-        res.json({ token, user: newUser.rows[0] });
+        res.json({ token, user: { id: newUser._id, email: newUser.email, shopkeeper_name: newUser.shopkeeper_name } });
 
     } catch (error) {
         console.error(error);
@@ -55,22 +56,20 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        const user = await User.findOne({ email });
 
-        if (userResult.rows.length === 0) {
+        if (!user) {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
-        const user = userResult.rows[0];
-
-        const validPassword = await bcrypt.compare(password, user.password_hash);
+        const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
-        res.json({ token, user: { id: user.id, email: user.email, shopkeeper_name: user.shopkeeper_name } });
+        res.json({ token, user: { id: user._id, email: user.email, shopkeeper_name: user.shopkeeper_name } });
 
     } catch (error) {
         console.error(error);
@@ -83,8 +82,8 @@ router.post('/send-login-otp', async (req, res) => {
     const { email } = req.body;
 
     try {
-        const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userResult.rows.length === 0) {
+        const user = await User.findOne({ email });
+        if (!user) {
             // Security: Don't reveal if user exists, but we return explicit message for UX as requested
             return res.json({ message: 'If the email exists, a login code has been sent.' });
         }
@@ -92,10 +91,9 @@ router.post('/send-login-otp', async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-        await db.query(
-            'UPDATE users SET otp = $1, otp_expires_at = $2 WHERE email = $3',
-            [otp, expiresAt, email]
-        );
+        user.otp = otp;
+        user.otp_expires_at = expiresAt;
+        await user.save();
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
@@ -127,16 +125,14 @@ router.post('/login-with-otp', async (req, res) => {
     const { email, otp } = req.body;
 
     try {
-        const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userResult.rows.length === 0) {
+        const user = await User.findOne({ email });
+        if (!user) {
             return res.status(400).json({ error: 'Invalid request' });
         }
 
-        const user = userResult.rows[0];
-
         // Check if OTP matches
-        // Convert both to strings to ensure type safety (DB might return int if column is numeric)
-        if (String(user.otp).trim() !== String(otp).trim()) {
+        // Convert both to strings to ensure type safety
+        if (!user.otp || String(user.otp).trim() !== String(otp).trim()) {
             console.log(`[DEBUG] OTP Mismatch. Input: '${otp}', Stored: '${user.otp}'`);
             return res.status(400).json({ error: 'Invalid Code' });
         }
@@ -151,19 +147,9 @@ router.post('/login-with-otp', async (req, res) => {
             return res.status(400).json({ error: 'Code expired' });
         }
 
-        // Clear OTP and Issue Token
-        // COMMENTED OUT to prevent race conditions (double submission) causing failures
-        // We allow the OTP to remain valid until expiry (10 mins) or until a new one is requested.
-        /*
-        await db.query(
-            'UPDATE users SET otp = NULL, otp_expires_at = NULL WHERE id = $1',
-            [user.id]
-        );
-        */
-
         console.log(`[DEV ONLY] Login Successful for ${email}`);
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-        res.json({ token, user: { id: user.id, email: user.email, shopkeeper_name: user.shopkeeper_name } });
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.json({ token, user: { id: user._id, email: user.email, shopkeeper_name: user.shopkeeper_name } });
 
     } catch (error) {
         console.error(error);
@@ -177,8 +163,8 @@ router.post('/forgot-password', async (req, res) => {
     console.log(`[DEBUG] Forgot Password request for: ${email}`);
 
     try {
-        const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userResult.rows.length === 0) {
+        const user = await User.findOne({ email });
+        if (!user) {
             console.log(`[DEBUG] User not found: ${email}`);
             return res.json({ message: 'If the email exists, an OTP has been sent.' });
         }
@@ -186,10 +172,9 @@ router.post('/forgot-password', async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit OTP
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
-        await db.query(
-            'UPDATE users SET otp = $1, otp_expires_at = $2 WHERE email = $3',
-            [otp, expiresAt, email]
-        );
+        user.otp = otp;
+        user.otp_expires_at = expiresAt;
+        await user.save();
         console.log(`[DEBUG] OTP stored in DB for ${email}`);
 
         const mailOptions = {
@@ -225,15 +210,13 @@ router.post('/reset-password', async (req, res) => {
     const { email, otp, newPassword } = req.body;
 
     try {
-        const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userResult.rows.length === 0) {
+        const user = await User.findOne({ email });
+        if (!user) {
             return res.status(400).json({ error: 'Invalid request' });
         }
 
-        const user = userResult.rows[0];
-
         // OTP Validation
-        if (String(user.otp).trim() !== String(otp).trim()) {
+        if (!user.otp || String(user.otp).trim() !== String(otp).trim()) {
             console.log(`[DEBUG] Reset OTP Mismatch. Input: '${otp}', Stored: '${user.otp}'`);
             return res.status(400).json({ error: 'Invalid OTP' });
         }
@@ -248,10 +231,10 @@ router.post('/reset-password', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        await db.query(
-            'UPDATE users SET password_hash = $1, otp = NULL, otp_expires_at = NULL WHERE id = $2',
-            [hashedPassword, user.id]
-        );
+        user.password = hashedPassword;
+        user.otp = null;
+        user.otp_expires_at = null;
+        await user.save();
 
         res.json({ message: 'Password reset successfully. You can now login.' });
 
@@ -274,10 +257,11 @@ router.put('/update-password', require('../middleware/auth'), async (req, res) =
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        await db.query(
-            'UPDATE users SET password_hash = $1 WHERE id = $2',
-            [hashedPassword, userId]
-        );
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        user.password = hashedPassword;
+        await user.save();
 
         res.json({ message: 'Password updated successfully' });
 

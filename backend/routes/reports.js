@@ -1,20 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db');
+const Bill = require('../models/Bill');
 const auth = require('../middleware/auth');
 
 // Get all bills for analytics (simplified for now, ideally should use specific queries)
 router.get('/bills', auth, async (req, res) => {
     try {
-        const result = await pool.query(
-            'SELECT id, total_amount, total_cost, created_at FROM bills WHERE user_id = $1 ORDER BY created_at DESC',
-            [req.user.id] // Fixed: user.id instead of user.userId
-        );
+        const bills = await Bill.find({ user_id: req.user.id })
+            .select('_id total_amount total_cost created_at')
+            .sort({ created_at: -1 });
 
-        // For top sellers, we might need bill items. 
-        // Optimization: separate endpoint or join. 
-        // For now, let's just return bills and handle client side aggregation or correct top sellers query.
-        res.json(result.rows);
+        // Transform _id to id for backwards compatibility if needed
+        const result = bills.map(b => ({
+            id: b._id,
+            total_amount: b.total_amount,
+            total_cost: b.total_cost,
+            created_at: b.created_at
+        }));
+
+        res.json(result);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -24,18 +28,30 @@ router.get('/bills', auth, async (req, res) => {
 // Top Sellers
 router.get('/top-sellers', auth, async (req, res) => {
     try {
-        // Join bill_items with bills to ensure user_id match
-        const result = await pool.query(`
-      SELECT bi.item_name, SUM(bi.quantity) as quantity, SUM(bi.selling_price * bi.quantity) as revenue
-      FROM bill_items bi
-      JOIN bills b ON bi.bill_id = b.id
-      WHERE b.user_id = $1
-      GROUP BY bi.item_name
-      ORDER BY revenue DESC
-      LIMIT 5
-    `, [req.user.id]); // Fixed: user.id instead of user.userId
+        // Use MongoDB aggregation to calculate top sellers by revenue
+        const result = await Bill.aggregate([
+            { $match: { user_id: new require('mongoose').Types.ObjectId(req.user.id) } },
+            { $unwind: "$items" },
+            {
+                $group: {
+                    _id: "$items.item_name",
+                    quantity: { $sum: "$items.quantity" },
+                    revenue: { $sum: { $multiply: ["$items.selling_price", "$items.quantity"] } }
+                }
+            },
+            { $sort: { revenue: -1 } },
+            { $limit: 5 },
+            {
+                $project: {
+                    _id: 0,
+                    item_name: "$_id",
+                    quantity: 1,
+                    revenue: 1
+                }
+            }
+        ]);
 
-        res.json(result.rows);
+        res.json(result);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

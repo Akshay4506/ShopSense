@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const Inventory = require('../models/Inventory');
+const Bill = require('../models/Bill');
 
 router.get('/', async (req, res) => {
     const userId = req.user.id;
@@ -8,12 +9,12 @@ router.get('/', async (req, res) => {
 
     try {
         // 1. Check Low Stock (Threshold: 5)
-        const lowStockResult = await db.query(
-            'SELECT item_name, quantity, unit FROM inventory WHERE user_id = $1 AND quantity <= 5',
-            [userId]
-        );
+        const lowStockItems = await Inventory.find({
+            user_id: userId,
+            quantity: { $lte: 5 }
+        });
 
-        lowStockResult.rows.forEach(item => {
+        lowStockItems.forEach(item => {
             notifications.push({
                 type: 'low_stock',
                 message: `Low Stock: ${item.item_name} is running low (${item.quantity} ${item.unit} left).`,
@@ -23,17 +24,27 @@ router.get('/', async (req, res) => {
 
         // 2. Check Profit Margin (Simple Heuristic on recent bills)
         // Get total sales and cost for current month
-        const profitResult = await db.query(
-            `SELECT 
-                SUM(total_amount) as revenue, 
-                SUM(total_cost) as cost 
-             FROM bills 
-             WHERE user_id = $1 
-             AND created_at >= NOW() - INTERVAL '30 days'`,
-            [userId]
-        );
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const { revenue, cost } = profitResult.rows[0];
+        const profitAgg = await Bill.aggregate([
+            {
+                $match: {
+                    user_id: new require('mongoose').Types.ObjectId(userId),
+                    created_at: { $gte: thirtyDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    revenue: { $sum: "$total_amount" },
+                    cost: { $sum: "$total_cost" }
+                }
+            }
+        ]);
+
+        const revenue = profitAgg.length > 0 ? profitAgg[0].revenue : 0;
+        const cost = profitAgg.length > 0 ? profitAgg[0].cost : 0;
 
         if (revenue && cost) {
             const margin = revenue - cost;

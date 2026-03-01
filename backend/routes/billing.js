@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const Bill = require('../models/Bill');
+const Inventory = require('../models/Inventory');
 
 // Create Bill
 router.post('/', async (req, res) => {
@@ -12,40 +13,40 @@ router.post('/', async (req, res) => {
     }
 
     try {
-        await db.query('BEGIN');
+        // Generate a simple sequential bill_number
+        const lastBill = await Bill.findOne({ user_id: userId }).sort({ bill_number: -1 });
+        const billNumber = lastBill && lastBill.bill_number ? lastBill.bill_number + 1 : 1;
 
-        // Create Bill
-        const billResult = await db.query(
-            `INSERT INTO bills (user_id, total_amount, total_cost)
-       VALUES ($1, $2, $3)
-       RETURNING *`,
-            [userId, total_amount, total_cost]
-        );
-        const bill = billResult.rows[0];
+        // Create Bill document
+        const newBill = new Bill({
+            user_id: userId,
+            bill_number: billNumber,
+            total_amount,
+            total_cost,
+            items: items.map(item => ({
+                inventory_id: item.inventory_id || null,
+                item_name: item.item_name,
+                quantity: item.quantity,
+                unit: item.unit,
+                cost_price: item.cost_price,
+                selling_price: item.selling_price
+            }))
+        });
 
-        // Add Bill Items and Update Inventory
+        await newBill.save();
+
+        // Decrement inventory if linked
         for (const item of items) {
-            await db.query(
-                `INSERT INTO bill_items (bill_id, inventory_id, item_name, quantity, unit, selling_price, cost_price)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                [bill.id, item.inventory_id || null, item.item_name, item.quantity, item.unit, item.selling_price, item.cost_price]
-            );
-
-            // Decrement inventory if linked
-            if (item.inventory_id) {
-                await db.query(
-                    `UPDATE inventory 
-           SET quantity = quantity - $1, updated_at = NOW()
-           WHERE id = $2 AND user_id = $3`,
-                    [item.quantity, item.inventory_id, userId]
+            if (item.inventory_id && item.inventory_id !== 'null') {
+                await Inventory.findOneAndUpdate(
+                    { _id: item.inventory_id, user_id: userId },
+                    { $inc: { quantity: -item.quantity } }
                 );
             }
         }
 
-        await db.query('COMMIT');
-        res.status(201).json(bill);
+        res.status(201).json(newBill);
     } catch (err) {
-        await db.query('ROLLBACK');
         console.error(err);
         res.status(500).json({ error: 'Server error' });
     }
@@ -54,12 +55,8 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
     const userId = req.user.id;
     try {
-        // Basic fetch, more details could be fetched if needed
-        const result = await db.query(
-            'SELECT * FROM bills WHERE user_id = $1 ORDER BY created_at DESC',
-            [userId]
-        );
-        res.json(result.rows);
+        const bills = await Bill.find({ user_id: userId }).sort({ created_at: -1 });
+        res.json(bills);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
@@ -72,23 +69,12 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
 
     try {
-        const billResult = await db.query(
-            'SELECT * FROM bills WHERE id = $1 AND user_id = $2',
-            [id, userId]
-        );
+        const bill = await Bill.findOne({ _id: id, user_id: userId });
 
-        if (billResult.rows.length === 0) {
+        if (!bill) {
             return res.status(404).json({ error: 'Bill not found' });
         }
 
-        const bill = billResult.rows[0];
-
-        const itemsResult = await db.query(
-            'SELECT * FROM bill_items WHERE bill_id = $1',
-            [id]
-        );
-
-        bill.items = itemsResult.rows;
         res.json(bill);
 
     } catch (err) {
