@@ -36,7 +36,7 @@ import {
 import { CrazyLoader } from '@/components/CrazyLoader';
 
 interface InventoryItem {
-  id: string;
+  _id: string;
   item_name: string;
   cost_price: number;
   selling_price: number;
@@ -133,7 +133,7 @@ export default function Inventory() {
     if (!editingItem) return;
 
     try {
-      await apiClient.put(`/inventory/${editingItem.id}`, {
+      await apiClient.put(`/inventory/${editingItem._id}`, {
         item_name: itemName,
         // @ts-ignore
         cost_price: parseInt(costPrice) || 0,
@@ -163,7 +163,7 @@ export default function Inventory() {
 
   const handleDeleteItem = async (item: InventoryItem) => {
     try {
-      await apiClient.delete(`/inventory/${item.id}`);
+      await apiClient.delete(`/inventory/${item._id}`);
       toast({
         title: 'Item Deleted',
         description: `${item.item_name} has been removed.`,
@@ -351,7 +351,7 @@ export default function Inventory() {
               const stockStatus = getStockStatus(item.quantity);
               return (
                 <Card
-                  key={item.id}
+                  key={item._id}
                   className={item.quantity === 0 ? 'border-destructive/50' : ''}
                 >
                   <CardHeader className="pb-2">

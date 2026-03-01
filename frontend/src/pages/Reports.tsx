@@ -48,14 +48,14 @@ import {
 } from 'lucide-react';
 
 interface Bill {
-  id: string;
+  _id: string;
   total_amount: number;
   total_cost: number;
   created_at: string;
 }
 
 interface InventoryItem {
-  id: string;
+  _id: string;
   item_name: string;
   quantity: number;
   selling_price: number;
@@ -589,7 +589,7 @@ export default function Reports() {
                 <div className="space-y-3">
                   {lowStockItems.map((item) => (
                     <div
-                      key={item.id}
+                      key={item._id}
                       className="flex justify-between items-center"
                     >
                       <span>{item.item_name}</span>

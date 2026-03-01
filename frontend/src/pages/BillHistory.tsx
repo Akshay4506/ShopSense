@@ -203,7 +203,7 @@ export default function BillHistory() {
               const profit = bill.total_amount - bill.total_cost;
               return (
                 <Card
-                  key={bill.id}
+                  key={bill._id}
                   className="cursor-pointer hover:border-primary transition-colors hover:shadow-md"
                   onClick={() => openPreview(bill)}
                 >

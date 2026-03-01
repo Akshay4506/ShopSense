@@ -335,7 +335,7 @@ export default function DailyOperations() {
               {pastSessions.map((session) => {
                 const profit = session.total_sales - session.total_cost;
                 return (
-                  <Card key={session.id}>
+                  <Card key={session._id}>
                     <CardContent className="py-4">
                       <div className="flex justify-between items-center">
                         <div>
