@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog';
 
 interface Bill {
-  id: string;
+  _id: string;
   bill_number: number;
   total_amount: number;
   total_cost: number;
@@ -90,7 +90,7 @@ export default function BillHistory() {
   const openPreview = async (billSummary: Bill) => {
     setIsPreviewLoading(true);
     try {
-      const fullBill: any = await apiClient.get(`/billing/${billSummary.id}`);
+      const fullBill: any = await apiClient.get(`/billing/${billSummary._id}`);
       setBillToPreview(fullBill);
       setIsPreviewOpen(true);
     } catch (error) {
