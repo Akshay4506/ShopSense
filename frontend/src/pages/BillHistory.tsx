@@ -154,13 +154,7 @@ export default function BillHistory() {
     });
   };
 
-  if (loading || isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -174,7 +168,10 @@ export default function BillHistory() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-2">
+            <div
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={() => navigate('/dashboard')}
+            >
               <Store className="h-6 w-6 text-primary" />
               <span className="text-lg font-bold text-foreground">
                 Bill History

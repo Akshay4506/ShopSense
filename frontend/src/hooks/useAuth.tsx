@@ -37,12 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(JSON.parse(storedUser));
     }
 
-    // Enforce a minimum 2-second delay for the loading animation
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
+    setLoading(false);
   }, []);
 
   const signUp = async (email: string, password: string) => {

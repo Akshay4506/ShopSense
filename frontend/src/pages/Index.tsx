@@ -11,27 +11,24 @@ import {
   ArrowRight,
   Loader2,
 } from 'lucide-react';
-import { CrazyLoader } from '@/components/CrazyLoader';
+
 
 export default function Index() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading && user) {
-      navigate('/dashboard');
-    }
-  }, [user, loading, navigate]);
 
-  if (loading) {
-    return <CrazyLoader />;
-  }
+
+
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => navigate(user ? '/dashboard' : '/')}
+          >
             <Store className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold text-foreground">
               ShopSense
@@ -39,7 +36,9 @@ export default function Index() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button onClick={() => navigate('/auth')}>Login</Button>
+            <Button onClick={() => navigate(user ? '/dashboard' : '/auth')}>
+              {user ? 'Dashboard' : 'Login'}
+            </Button>
           </div>
         </div>
       </header>
@@ -57,10 +56,10 @@ export default function Index() {
             </p>
             <Button
               size="lg"
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate(user ? '/dashboard' : '/auth')}
               className="gap-2"
             >
-              Get Started <ArrowRight className="h-5 w-5" />
+              {user ? 'Go to Dashboard' : 'Get Started'} <ArrowRight className="h-5 w-5" />
             </Button>
           </div>
         </section>
@@ -123,8 +122,8 @@ export default function Index() {
             <p className="text-muted-foreground mb-6">
               Join thousands of shopkeepers already using ShopSense.
             </p>
-            <Button size="lg" onClick={() => navigate('/auth')}>
-              Start Free Today
+            <Button size="lg" onClick={() => navigate(user ? '/dashboard' : '/auth')}>
+              {user ? 'Go to Dashboard' : 'Start Free Today'}
             </Button>
           </div>
         </section>

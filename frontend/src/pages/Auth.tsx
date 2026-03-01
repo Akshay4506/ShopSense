@@ -26,7 +26,7 @@ import {
   Timer,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { CrazyLoader } from "@/components/CrazyLoader";
+
 import { apiClient } from '@/api/client';
 
 export default function Auth() {
@@ -121,9 +121,7 @@ export default function Auth() {
 
   // OTP flows have been replaced by Password-only login per user request.
 
-  if (authLoading) {
-    return <CrazyLoader />;
-  }
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background text-foreground">
@@ -132,7 +130,10 @@ export default function Auth() {
       </div>
 
       <div className="w-full max-w-[420px] mb-8 text-center space-y-2">
-        <div className="flex items-center justify-center gap-2 text-primary">
+        <div
+          className="flex items-center justify-center gap-2 text-primary cursor-pointer"
+          onClick={() => navigate(user ? '/dashboard' : '/')}
+        >
           <Store className="h-8 w-8" />
           <span className="text-2xl font-bold">ShopSense</span>
         </div>
@@ -167,25 +168,33 @@ export default function Auth() {
                 <form onSubmit={handleLoginEmail} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        className="pl-9"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="password"
+                        className="pl-9"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between text-sm">

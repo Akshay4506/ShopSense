@@ -562,7 +562,10 @@ export default function Billing() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-2">
+            <div
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={() => navigate('/dashboard')}
+            >
               <Store className="h-6 w-6 text-primary" />
               <span className="text-lg font-bold text-foreground">Billing</span>
             </div>

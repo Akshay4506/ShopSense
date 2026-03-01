@@ -22,7 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CrazyLoader } from '@/components/CrazyLoader';
+
 
 interface Profile {
   shopkeeper_name: string;
@@ -142,15 +142,16 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) {
-    return <CrazyLoader />;
-  }
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b bg-card text-card-foreground py-4 px-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div
+          className="flex items-center gap-4 cursor-pointer"
+          onClick={() => navigate('/')}
+        >
           <Store className="h-7 w-7 text-primary" />
           <h1 className="text-2xl font-bold">ShopSense</h1>
         </div>
@@ -180,10 +181,10 @@ export default function Dashboard() {
                     >
                       <div
                         className={`mt-1 h-2 w-2 rounded-full shrink-0 ${notif.severity === 'critical'
-                            ? 'bg-red-500'
-                            : notif.severity === 'alert'
-                              ? 'bg-orange-500'
-                              : 'bg-yellow-500'
+                          ? 'bg-red-500'
+                          : notif.severity === 'alert'
+                            ? 'bg-orange-500'
+                            : 'bg-yellow-500'
                           }`}
                       />
                       <div>

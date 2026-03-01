@@ -56,15 +56,21 @@ router.post('/login', async (req, res) => {
     const { identifier, password } = req.body;
 
     try {
+        const cleanIdentifier = identifier ? identifier.trim() : '';
+        console.log("LOGIN ATTEMPT | Identifier:", cleanIdentifier, "Password Length:", password ? password.length : 0);
         const user = await User.findOne({
-            $or: [{ email: identifier }, { phone: identifier }]
+            $or: [{ email: cleanIdentifier }, { phone: cleanIdentifier }]
         });
+
+        console.log("LOGIN DB RESULT | User Found:", !!user, "Phone:", user?.phone, "Email:", user?.email);
 
         if (!user) {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
+        console.log("LOGIN PWD CHECK | validPassword:", validPassword);
+
         if (!validPassword) {
             return res.status(400).json({ error: 'Invalid credentials' });
         }

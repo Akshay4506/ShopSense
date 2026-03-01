@@ -189,13 +189,7 @@ export default function DailyOperations() {
     });
   };
 
-  if (loading || isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+
 
   const stats = getTodayStats();
 
@@ -211,7 +205,10 @@ export default function DailyOperations() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-2">
+            <div
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={() => navigate('/dashboard')}
+            >
               <Store className="h-6 w-6 text-primary" />
               <span className="text-lg font-bold text-foreground">
                 Daily Operations
@@ -335,7 +332,7 @@ export default function DailyOperations() {
               {pastSessions.map((session) => {
                 const profit = session.total_sales - session.total_cost;
                 return (
-                  <Card key={session._id}>
+                  <Card key={session.id}>
                     <CardContent className="py-4">
                       <div className="flex justify-between items-center">
                         <div>
