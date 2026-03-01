@@ -40,12 +40,11 @@ export default function Auth() {
 
   const [loading, setLoading] = useState(false);
 
-  // Views: "login", "signup", "forgot-password", "reset-password", "login-otp-send", "login-otp-verify"
+  // Views: "login", "signup", "login-mobile-send", "login-mobile-verify"
   const [view, setView] = useState('login');
 
   // OTP State
   const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [countdown, setCountdown] = useState(0); // Resend timer
 
   const { login: authLogin, loginWithToken, user, loading: authLoading } = useAuth(); // Rename to avoid conflict with local loading
@@ -116,24 +115,24 @@ export default function Auth() {
     }
   };
 
-  const handleSendLoginOtp = async (e: React.FormEvent) => {
+  const handleSendMobileOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
+    if (!phone) {
       toast({
         variant: 'destructive',
-        title: 'Email required',
-        description: 'Please enter your email address.',
+        title: 'Mobile number required',
+        description: 'Please enter your mobile number.',
       });
       return;
     }
     setLoading(true);
     try {
-      await apiClient.post('/auth/send-login-otp', { email });
+      await apiClient.post('/auth/send-mobile-otp', { phone });
       toast({
-        title: 'Code Sent',
-        description: 'Check your email for the login code.',
+        title: 'SMS Sent',
+        description: 'Check your backend console for the DEV login code.',
       });
-      setView('login-otp-verify');
+      setView('login-mobile-verify');
       startTimer();
     } catch (error: any) {
       toast({
@@ -146,74 +145,18 @@ export default function Auth() {
     }
   };
 
-  const handleVerifyLoginOtp = async (e: React.FormEvent) => {
+  const handleVerifyMobileOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await apiClient.post('/auth/login-with-otp', { email, otp });
-      // console.log("OTP Login Response:", res);
+      const res = await apiClient.post('/auth/login-with-mobile-otp', { phone, otp });
       loginWithToken(res.token, res.user);
       navigate('/dashboard');
     } catch (error: any) {
-      // console.error("OTP Login Error:", error);
       toast({
         variant: 'destructive',
         title: 'Error',
         description: error.message || 'Invalid code',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) {
-      toast({
-        variant: 'destructive',
-        title: 'Email required',
-        description: 'Please enter your email address.',
-      });
-      return;
-    }
-    setLoading(true);
-    try {
-      await apiClient.post('/auth/forgot-password', { email });
-      toast({
-        title: 'OTP Sent',
-        description: 'Check your email for the verification code.',
-      });
-      setView('reset-password');
-      startTimer();
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to send OTP',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await apiClient.post('/auth/reset-password', { email, otp, newPassword });
-      toast({
-        title: 'Password Reset',
-        description: 'Your password has been changed. Please login.',
-      });
-      setView('login');
-      setPassword('');
-      setNewPassword('');
-      setOtp('');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to reset password',
       });
     } finally {
       setLoading(false);
@@ -247,43 +190,23 @@ export default function Auth() {
             </p>
           </div>
         )}
-        {view === 'login-otp-send' && (
+        {view === 'login-mobile-send' && (
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">
-              Login with OTP
+              Login with Mobile
             </h1>
             <p className="text-sm text-muted-foreground">
-              Enter your email to receive a login code
+              Enter your mobile number to receive a login code
             </p>
           </div>
         )}
-        {view === 'login-otp-verify' && (
+        {view === 'login-mobile-verify' && (
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">
               Verify Login
             </h1>
             <p className="text-sm text-muted-foreground">
-              Enter the code sent to {email}
-            </p>
-          </div>
-        )}
-        {view === 'forgot-password' && (
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Reset Password
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Enter your email to verify your identity
-            </p>
-          </div>
-        )}
-        {view === 'reset-password' && (
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              New Password
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Enter the OTP sent to your email
+              Enter the code sent to {phone}
             </p>
           </div>
         )}
@@ -332,17 +255,9 @@ export default function Auth() {
                       variant="link"
                       className="p-0 h-auto text-muted-foreground"
                       type="button"
-                      onClick={() => setView('login-otp-send')}
+                      onClick={() => setView('login-mobile-send')}
                     >
-                      Login with OTP
-                    </Button>
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto text-primary"
-                      type="button"
-                      onClick={() => setView('forgot-password')}
-                    >
-                      Forgot password?
+                      Login with Mobile
                     </Button>
                   </div>
 
@@ -467,20 +382,19 @@ export default function Auth() {
             </Tabs>
           ) : null}
 
-          {/* Login with OTP - Send */}
-          {view === 'login-otp-send' && (
-            <form onSubmit={handleSendLoginOtp} className="space-y-4">
+          {view === 'login-mobile-send' && (
+            <form onSubmit={handleSendMobileOtp} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-otp-email">Email</Label>
+                <Label htmlFor="login-mobile-phone">Mobile Number</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="login-otp-email"
+                    id="login-mobile-phone"
                     className="pl-9"
-                    placeholder="you@example.com"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="1234567890"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     required
                   />
                 </div>
@@ -509,19 +423,18 @@ export default function Auth() {
             </form>
           )}
 
-          {/* Login with OTP - Verify */}
-          {view === 'login-otp-verify' && (
-            <form onSubmit={handleVerifyLoginOtp} className="space-y-4">
+          {view === 'login-mobile-verify' && (
+            <form onSubmit={handleVerifyMobileOtp} className="space-y-4">
               <div className="space-y-2">
-                <Label>Email</Label>
-                <Input value={email} disabled className="bg-muted" />
+                <Label>Mobile Number</Label>
+                <Input value={phone} disabled className="bg-muted" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="login-otp-code">Verification Code</Label>
+                <Label htmlFor="login-mobile-code">Verification Code</Label>
                 <div className="relative">
                   <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="login-otp-code"
+                    id="login-mobile-code"
                     className="pl-9 tracking-widest font-mono"
                     placeholder="123456"
                     value={otp}
@@ -551,7 +464,7 @@ export default function Auth() {
                     variant="link"
                     className="h-auto p-0"
                     type="button"
-                    onClick={handleSendLoginOtp}
+                    onClick={handleSendMobileOtp}
                   >
                     Resend Code
                   </Button>
@@ -565,123 +478,6 @@ export default function Auth() {
                 onClick={() => setView('login')}
               >
                 Back to Login
-              </Button>
-            </form>
-          )}
-
-          {/* Forgot Password - Send */}
-          {view === 'forgot-password' && (
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="reset-email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="reset-email"
-                    className="pl-9"
-                    placeholder="you@example.com"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <Button
-                className="w-full"
-                type="submit"
-                disabled={loading || countdown > 0}
-              >
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : countdown > 0 ? (
-                  `Resend in ${countdown}s`
-                ) : (
-                  'Send Verification Code'
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full"
-                type="button"
-                onClick={() => setView('login')}
-              >
-                Back to Login
-              </Button>
-            </form>
-          )}
-
-          {/* Forgot Password - Verify & Reset */}
-          {view === 'reset-password' && (
-            <form onSubmit={handleResetPassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input value={email} disabled className="bg-muted" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="otp">Verification Code (OTP)</Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="otp"
-                    className="pl-9 tracking-widest font-mono"
-                    placeholder="123456"
-                    value={otp}
-                    maxLength={6}
-                    onChange={(e) => setOtp(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="new-password"
-                    type="password"
-                    className="pl-9"
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <Button className="w-full" type="submit" disabled={loading}>
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  'Reset Password'
-                )}
-              </Button>
-
-              <div className="text-center text-sm">
-                {countdown > 0 ? (
-                  <span className="text-muted-foreground flex items-center justify-center gap-1">
-                    <Timer className="h-3 w-3" /> Resend available in{' '}
-                    {countdown}s
-                  </span>
-                ) : (
-                  <Button
-                    variant="link"
-                    className="h-auto p-0"
-                    type="button"
-                    onClick={handleForgotPassword}
-                  >
-                    Resend Code
-                  </Button>
-                )}
-              </div>
-
-              <Button
-                variant="ghost"
-                className="w-full"
-                type="button"
-                onClick={() => setView('forgot-password')}
-              >
-                Back
               </Button>
             </form>
           )}

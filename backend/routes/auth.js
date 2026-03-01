@@ -77,15 +77,15 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Send Login OTP (Passwordless & Login Verification)
-router.post('/send-login-otp', async (req, res) => {
-    const { email } = req.body;
+// Send Mobile OTP (Login Verification)
+router.post('/send-mobile-otp', async (req, res) => {
+    const { phone } = req.body;
 
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ phone });
         if (!user) {
-            // Security: Don't reveal if user exists, but we return explicit message for UX as requested
-            return res.json({ message: 'If the email exists, a login code has been sent.' });
+            // Security: Don't reveal if user exists, but return explicit message for UX
+            return res.json({ message: 'If the mobile number exists, a login code has been sent.' });
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -95,42 +95,28 @@ router.post('/send-login-otp', async (req, res) => {
         user.otp_expires_at = expiresAt;
         await user.save();
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'ShopSense Login Code',
-            text: `Your login verification code is: ${otp}. It expires in 10 minutes.`
-        };
+        // Print OTP internally for development testing since no SMS API is present
+        console.log(`[DEV ONLY] Mobile OTP for ${phone}: ${otp}`);
 
-
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-            try {
-                await transporter.sendMail(mailOptions);
-            } catch (emailErr) {
-                console.error("Failed to send login email (Dev Mode - continuing):", emailErr.message);
-            }
-        }
-
-        res.json({ message: 'Login code sent to your email.' });
+        res.json({ message: 'Login code sent to your mobile device.' });
 
     } catch (error) {
-        console.error("OTP Error:", error);
+        console.error("Mobile OTP Error:", error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Login with OTP
-router.post('/login-with-otp', async (req, res) => {
-    const { email, otp } = req.body;
+// Login with Mobile OTP
+router.post('/login-with-mobile-otp', async (req, res) => {
+    const { phone, otp } = req.body;
 
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ phone });
         if (!user) {
             return res.status(400).json({ error: 'Invalid request' });
         }
 
         // Check if OTP matches
-        // Convert both to strings to ensure type safety
         if (!user.otp || String(user.otp).trim() !== String(otp).trim()) {
             return res.status(400).json({ error: 'Invalid Code' });
         }
@@ -139,93 +125,17 @@ router.post('/login-with-otp', async (req, res) => {
         const now = new Date();
         const expires = new Date(user.otp_expires_at);
 
-
         if (now > expires) {
             return res.status(400).json({ error: 'Code expired' });
         }
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-        res.json({ token, user: { id: user._id, email: user.email, shopkeeper_name: user.shopkeeper_name } });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-// Forgot Password - Send OTP
-router.post('/forgot-password', async (req, res) => {
-    const { email } = req.body;
-
-    try {
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.json({ message: 'If the email exists, an OTP has been sent.' });
-        }
-
-        const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit OTP
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
-
-        user.otp = otp;
-        user.otp_expires_at = expiresAt;
-        await user.save();
-
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'ShopSense Password Reset OTP',
-            text: `Your password reset OTP is: ${otp}. It expires in 10 minutes.`
-        };
-
-
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-            try {
-                await transporter.sendMail(mailOptions);
-            } catch (emailErr) {
-                console.error("Failed to send reset email (Dev Mode - continuing):", emailErr.message);
-            }
-        } else {
-        }
-
-        res.json({ message: 'If the email exists, an OTP has been sent.' });
-
-    } catch (error) {
-        console.error("Forgot Password Error:", error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Reset Password - Verify OTP and Reset
-router.post('/reset-password', async (req, res) => {
-    const { email, otp, newPassword } = req.body;
-
-    try {
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ error: 'Invalid request' });
-        }
-
-        // OTP Validation
-        if (!user.otp || String(user.otp).trim() !== String(otp).trim()) {
-            return res.status(400).json({ error: 'Invalid OTP' });
-        }
-
-        const now = new Date();
-        const expires = new Date(user.otp_expires_at);
-
-        if (now > expires) {
-            return res.status(400).json({ error: 'OTP expired' });
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-        user.password = hashedPassword;
+        // Clear OTP
         user.otp = null;
         user.otp_expires_at = null;
         await user.save();
 
-        res.json({ message: 'Password reset successfully. You can now login.' });
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.json({ token, user: { id: user._id, email: user.email, shopkeeper_name: user.shopkeeper_name, phone: user.phone } });
 
     } catch (error) {
         console.error(error);
