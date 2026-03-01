@@ -14,11 +14,8 @@ import {
   Trash2,
   Download,
   Loader2,
-  Mic,
-  MicOff,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import useSpeechRecognition from '@/hooks/useSpeechRecognition';
 import { Receipt } from '@/components/Receipt';
 import {
   Dialog,
@@ -27,13 +24,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface InventoryItem {
   id: string;
@@ -390,42 +380,6 @@ export default function Billing() {
     }
   };
 
-  // 2. Voice Handling (Calls Helper)
-  const handleVoiceData = async (transcript: string) => {
-    // Determine input by removing trailing dot if present (common in voice)
-    const cleanTranscript = transcript.replace(/\.$/, '');
-
-    setInputValue(cleanTranscript);
-    toast({
-      title: 'Heard:',
-      description: cleanTranscript,
-    });
-    const success = await processAddItem(cleanTranscript);
-    if (success) {
-      // Clear input after short delay to show what was recognized
-      setTimeout(() => setInputValue(''), 1000);
-    }
-  };
-
-  const [language, setLanguage] = useState('en-IN');
-
-  // 3. Custom Hook (Must be top level, unconditional)
-  const { isListening, startListening, stopListening, hasRecognitionSupport } =
-    useSpeechRecognition(handleVoiceData, language);
-
-  const toggleListening = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-      toast({
-        title: 'Listening...',
-        description: language === 'te-IN' ? 'Matladandi...' : 'Speak items...',
-        variant: 'default',
-      });
-    }
-  };
-
   // 4. Effects
   useEffect(() => {
     if (!loading && !user) {
@@ -634,33 +588,6 @@ export default function Billing() {
                 disabled={isProcessing}
                 className="flex-1"
               />
-              {/* Language Selector */}
-              <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Lang" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en-IN">English</SelectItem>
-                  <SelectItem value="te-IN">Telugu</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Mic Icon */}
-              {hasRecognitionSupport && (
-                <Button
-                  variant={isListening ? 'destructive' : 'secondary'}
-                  onClick={toggleListening}
-                  disabled={isProcessing}
-                  title={isListening ? 'Stop Listening' : 'Start Voice Input'}
-                  className={isListening ? 'animate-pulse' : ''}
-                >
-                  {isListening ? (
-                    <MicOff className="h-4 w-4" />
-                  ) : (
-                    <Mic className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
 
               <Button
                 onClick={handleAddItem}
