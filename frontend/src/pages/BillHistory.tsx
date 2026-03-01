@@ -202,7 +202,11 @@ export default function BillHistory() {
             {bills.map((bill) => {
               const profit = bill.total_amount - bill.total_cost;
               return (
-                <Card key={bill.id}>
+                <Card
+                  key={bill.id}
+                  className="cursor-pointer hover:border-primary transition-colors hover:shadow-md"
+                  onClick={() => openPreview(bill)}
+                >
                   <CardContent className="py-4">
                     <div className="flex justify-between items-center">
                       <div>
@@ -226,7 +230,10 @@ export default function BillHistory() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => openPreview(bill)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openPreview(bill);
+                          }}
                           disabled={isPreviewLoading}
                         >
                           {isPreviewLoading ? (

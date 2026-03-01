@@ -20,6 +20,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
   BarChart,
   Bar,
   XAxis,
@@ -87,6 +94,7 @@ export default function Reports() {
     new Date().getFullYear().toString(),
   );
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGstPreviewOpen, setIsGstPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -313,8 +321,8 @@ export default function Reports() {
           </thead>
           <tbody>
             ${monthlyData
-              .map(
-                (m) => `
+        .map(
+          (m) => `
               <tr>
                 <td>${m.month}</td>
                 <td>${m.sales.toLocaleString()}</td>
@@ -323,8 +331,8 @@ export default function Reports() {
                 <td>${m.gst.toLocaleString()}</td>
               </tr>
             `,
-              )
-              .join('')}
+        )
+        .join('')}
             <tr class="totals">
               <td>TOTAL</td>
               <td>₹${totals.sales.toLocaleString()}</td>
@@ -623,19 +631,20 @@ export default function Reports() {
                 </SelectContent>
               </Select>
 
-              <Button onClick={generateGSTPdf} disabled={isGeneratingPdf}>
-                {isGeneratingPdf ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Download GST Report
+              <Button onClick={() => setIsGstPreviewOpen(true)}>
+                Preview GST Report
               </Button>
             </div>
 
             {/* Year Preview */}
-            <div className="mt-6">
-              <h4 className="font-medium mb-3">{selectedYear} Summary</h4>
+            <div
+              className="mt-6 cursor-pointer p-4 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors shadow-sm"
+              onClick={() => setIsGstPreviewOpen(true)}
+            >
+              <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-4 gap-2">
+                <h4 className="font-medium text-lg">{selectedYear} Summary</h4>
+                <p className="text-sm text-primary font-medium">Click to view table & download</p>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {(() => {
                   const { totals } = getGSTData(parseInt(selectedYear));
@@ -683,6 +692,71 @@ export default function Reports() {
           </CardContent>
         </Card>
       </main>
+
+      {/* GST Preview Dialog */}
+      <Dialog open={isGstPreviewOpen} onOpenChange={setIsGstPreviewOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>GST Summary Report - {selectedYear}</DialogTitle>
+          </DialogHeader>
+
+          <div className="max-h-[60vh] overflow-y-auto mt-4">
+            {(() => {
+              const { monthlyData, totals } = getGSTData(parseInt(selectedYear));
+              return (
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-muted text-left">
+                        <th className="p-3 border">Month</th>
+                        <th className="p-3 border text-right">Total Sales (₹)</th>
+                        <th className="p-3 border text-right">Total Cost (₹)</th>
+                        <th className="p-3 border text-right">Profit (₹)</th>
+                        <th className="p-3 border text-right">Est. GST @18% (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthlyData.map((m, i) => (
+                        <tr key={i} className="hover:bg-muted/50">
+                          <td className="p-3 border">{m.month}</td>
+                          <td className="p-3 border text-right">₹{m.sales.toLocaleString()}</td>
+                          <td className="p-3 border text-right">₹{m.cost.toLocaleString()}</td>
+                          <td className="p-3 border text-right">₹{m.profit.toLocaleString()}</td>
+                          <td className="p-3 border text-right">₹{m.gst.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-primary/10 font-bold">
+                        <td className="p-3 border">TOTAL</td>
+                        <td className="p-3 border text-right">₹{totals.sales.toLocaleString()}</td>
+                        <td className="p-3 border text-right">₹{totals.cost.toLocaleString()}</td>
+                        <td className="p-3 border text-right">₹{totals.profit.toLocaleString()}</td>
+                        <td className="p-3 border text-right">₹{totals.gst.toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row sm:justify-end gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsGstPreviewOpen(false)}
+            >
+              Close
+            </Button>
+            <Button onClick={generateGSTPdf} disabled={isGeneratingPdf}>
+              {isGeneratingPdf ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Download PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
