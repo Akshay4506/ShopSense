@@ -58,8 +58,4 @@ router.get('/top-sellers', auth, async (req, res) => {
     }
 });
 
-// GST Data / Monthly Stats
-// This can be calculated on frontend from /bills or done here. 
-// Let's stick to /bills for raw data to match frontend logic for now, or add specific aggregation if needed.
-
 module.exports = router;

@@ -247,7 +247,7 @@ export default function Billing() {
 
   // Helper to convert units
   const convertQuantity = (qty: number, fromUnit: string, toUnit: string): number => {
-    console.log(`[DEBUG] Converting ${qty} from '${fromUnit}' to '${toUnit}'`);
+
 
     const normalize = (u: string) => {
       u = (u || '').toLowerCase().trim();

@@ -102,7 +102,6 @@ router.post('/send-login-otp', async (req, res) => {
             text: `Your login verification code is: ${otp}. It expires in 10 minutes.`
         };
 
-        console.log(`[DEV ONLY] Login OTP for ${email}: ${otp}`);
 
         if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
             try {
@@ -133,7 +132,6 @@ router.post('/login-with-otp', async (req, res) => {
         // Check if OTP matches
         // Convert both to strings to ensure type safety
         if (!user.otp || String(user.otp).trim() !== String(otp).trim()) {
-            console.log(`[DEBUG] OTP Mismatch. Input: '${otp}', Stored: '${user.otp}'`);
             return res.status(400).json({ error: 'Invalid Code' });
         }
 
@@ -141,13 +139,11 @@ router.post('/login-with-otp', async (req, res) => {
         const now = new Date();
         const expires = new Date(user.otp_expires_at);
 
-        console.log(`[DEBUG] OTP Expiry Check. Now: ${now}, Expires: ${expires}`);
 
         if (now > expires) {
             return res.status(400).json({ error: 'Code expired' });
         }
 
-        console.log(`[DEV ONLY] Login Successful for ${email}`);
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
         res.json({ token, user: { id: user._id, email: user.email, shopkeeper_name: user.shopkeeper_name } });
 
@@ -160,12 +156,10 @@ router.post('/login-with-otp', async (req, res) => {
 // Forgot Password - Send OTP
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
-    console.log(`[DEBUG] Forgot Password request for: ${email}`);
 
     try {
         const user = await User.findOne({ email });
         if (!user) {
-            console.log(`[DEBUG] User not found: ${email}`);
             return res.json({ message: 'If the email exists, an OTP has been sent.' });
         }
 
@@ -175,7 +169,6 @@ router.post('/forgot-password', async (req, res) => {
         user.otp = otp;
         user.otp_expires_at = expiresAt;
         await user.save();
-        console.log(`[DEBUG] OTP stored in DB for ${email}`);
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
@@ -184,17 +177,14 @@ router.post('/forgot-password', async (req, res) => {
             text: `Your password reset OTP is: ${otp}. It expires in 10 minutes.`
         };
 
-        console.log(`[DEV ONLY] Reset OTP for ${email}: ${otp}`);
 
         if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
             try {
                 await transporter.sendMail(mailOptions);
-                console.log(`[DEBUG] Email sent successfully to ${email}`);
             } catch (emailErr) {
                 console.error("Failed to send reset email (Dev Mode - continuing):", emailErr.message);
             }
         } else {
-            console.log(`[DEBUG] Email credentials missing, skipping sendMail`);
         }
 
         res.json({ message: 'If the email exists, an OTP has been sent.' });
@@ -217,7 +207,6 @@ router.post('/reset-password', async (req, res) => {
 
         // OTP Validation
         if (!user.otp || String(user.otp).trim() !== String(otp).trim()) {
-            console.log(`[DEBUG] Reset OTP Mismatch. Input: '${otp}', Stored: '${user.otp}'`);
             return res.status(400).json({ error: 'Invalid OTP' });
         }
 

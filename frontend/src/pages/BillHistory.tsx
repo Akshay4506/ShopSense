@@ -29,7 +29,6 @@ interface Bill {
   total_amount: number;
   total_cost: number;
   created_at: string;
-  // In a real app, you'd fetch items too. For now we print summary.
 }
 
 interface Profile {

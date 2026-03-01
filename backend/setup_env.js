@@ -14,7 +14,7 @@ console.log("\n--- ShopSense Environment Setup ---\n");
 console.log("It seems your .env file is missing or not saved correctly.");
 console.log("I will create it for you.\n");
 
-rl.question('Please paste your full DATABASE_URL (e.g., postgres://postgres:password@localhost:5432/shopsense): ', (answer) => {
+rl.question('Please paste your full MONGODB_URI (e.g., mongodb://localhost:27017/shopsense-dukaan): ', (answer) => {
     const dbUrl = answer.trim();
 
     if (!dbUrl) {
@@ -23,19 +23,13 @@ rl.question('Please paste your full DATABASE_URL (e.g., postgres://postgres:pass
         return;
     }
 
-    const content = `DATABASE_URL=${dbUrl}\nJWT_SECRET=supersecretkey123\n# Add EMAIL_USER and EMAIL_PASS here for forgot password functionality\n`;
+    const content = `MONGODB_URI=${dbUrl}\nJWT_SECRET=supersecretkey123\n# Add EMAIL_USER and EMAIL_PASS here for forgot password functionality\n`;
 
     fs.writeFileSync(envPath, content);
     console.log(`\nSuccess! .env file created at: ${envPath}`);
 
-    console.log("\nAttempting to run schema update now...\n");
-
-    try {
-        execSync('node updateSchema.js', { stdio: 'inherit' });
-        console.log("\nSchema update verified! You can now restart your server with 'node server.js'");
-    } catch (error) {
-        console.error("\nSchema update failed. Please check your connection string and try again.");
-    }
+    appMsg = "You can now restart your server with 'node server.js'";
+    console.log(`\n${appMsg}`);
 
     rl.close();
 });

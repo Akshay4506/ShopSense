@@ -95,7 +95,7 @@ export default function Dashboard() {
 
   const fetchInventoryStats = async () => {
     try {
-      console.log('Fetching stats...');
+
       const [inventoryData, billsData] = await Promise.all([
         apiClient.get('/inventory'),
         apiClient.get('/reports/bills'),

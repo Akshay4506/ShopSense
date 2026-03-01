@@ -121,7 +121,7 @@ export default function Reports() {
 
   const fetchProfile = async () => {
     try {
-      console.log('Fetching profile...');
+
       const data = await apiClient.get('/profile');
       if (data) setProfile(data);
     } catch (error) {
@@ -131,7 +131,7 @@ export default function Reports() {
 
   const fetchBills = async () => {
     try {
-      console.log('Fetching bills report...');
+
       const data = await apiClient.get('/reports/bills');
       if (Array.isArray(data)) {
         setBills(data);
@@ -143,7 +143,7 @@ export default function Reports() {
 
   const fetchInventory = async () => {
     try {
-      console.log('Fetching inventory...');
+
       const data = await apiClient.get('/inventory');
       if (Array.isArray(data)) setInventory(data);
     } catch (error) {
@@ -153,7 +153,7 @@ export default function Reports() {
 
   const fetchTopSellers = async () => {
     try {
-      console.log('Fetching top sellers...');
+
       const data = await apiClient.get('/reports/top-sellers');
       if (Array.isArray(data)) {
         setTopSellers(data);
