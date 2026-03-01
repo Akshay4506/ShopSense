@@ -16,8 +16,8 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
-  login: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   loginWithToken: (token: string, user: User) => void;
   signOut: () => Promise<void>;
 }
@@ -46,27 +46,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string) => {
-    try {
-      await apiClient.post('/auth/register', { email, password });
-      return { error: null };
-    } catch (error: any) {
-      return { error };
-    }
+    await apiClient.post('/auth/register', { email, password });
   };
 
   const login = async (email: string, password: string) => {
-    try {
-      const { token, user } = await apiClient.post('/auth/login', {
-        email,
-        password,
-      });
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
-      return { error: null };
-    } catch (error: any) {
-      return { error };
-    }
+    const { token, user } = await apiClient.post('/auth/login', {
+      email,
+      password,
+    });
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
   };
 
   const loginWithToken = (token: string, user: User) => {

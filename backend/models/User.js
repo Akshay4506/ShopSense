@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
     shopkeeper_name: { type: String, required: true },
-    shop_name: { type: String, required: true },
-    shop_address: { type: String, required: true },
-    phone: { type: String, required: true },
+    shop_name: { type: String, default: '' },
+    shop_address: { type: String, default: '' },
+    phone: { type: String, default: '' },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     reset_token: { type: String, default: null },

@@ -109,7 +109,7 @@ export default function Auth() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to create account',
+        description: error.message || 'Failed to create account',
       });
     } finally {
       setLoading(false);
@@ -139,7 +139,7 @@ export default function Auth() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to send code',
+        description: error.message || 'Failed to send code',
       });
     } finally {
       setLoading(false);
@@ -159,8 +159,7 @@ export default function Auth() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description:
-          error.response?.data?.error || error.message || 'Invalid code',
+        description: error.message || 'Invalid code',
       });
     } finally {
       setLoading(false);
@@ -190,7 +189,7 @@ export default function Auth() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to send OTP',
+        description: error.message || 'Failed to send OTP',
       });
     } finally {
       setLoading(false);
@@ -214,7 +213,7 @@ export default function Auth() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to reset password',
+        description: error.message || 'Failed to reset password',
       });
     } finally {
       setLoading(false);

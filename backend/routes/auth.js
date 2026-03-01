@@ -35,7 +35,7 @@ router.post('/register', async (req, res) => {
             password: hashedPassword,
             shopkeeper_name,
             shop_name,
-            shop_address: address,
+            shop_address: address, // address comes from req.body
             phone
         });
         await newUser.save();
@@ -46,8 +46,8 @@ router.post('/register', async (req, res) => {
         res.json({ token, user: { id: newUser._id, email: newUser.email, shopkeeper_name: newUser.shopkeeper_name } });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
+        console.error("DEBUG REG ERROR:", error);
+        res.status(500).json({ error: error.message || 'Server error' });
     }
 });
 

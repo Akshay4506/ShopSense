@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+require('./db'); // Initialize MongoDB connection
 
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
