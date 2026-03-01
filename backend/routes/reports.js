@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Bill = require('../models/Bill');
 const auth = require('../middleware/auth');
+const { Types: { ObjectId } } = require('mongoose');
 
 // Get all bills for analytics (simplified for now, ideally should use specific queries)
 router.get('/bills', auth, async (req, res) => {
@@ -30,7 +31,7 @@ router.get('/top-sellers', auth, async (req, res) => {
     try {
         // Use MongoDB aggregation to calculate top sellers by revenue
         const result = await Bill.aggregate([
-            { $match: { user_id: new require('mongoose').Types.ObjectId(req.user.id) } },
+            { $match: { user_id: new ObjectId(req.user.id) } },
             { $unwind: "$items" },
             {
                 $group: {

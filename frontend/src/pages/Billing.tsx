@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dialog';
 
 interface InventoryItem {
-  id: string;
+  _id: string;
   item_name: string;
   cost_price: number;
   selling_price: number;
@@ -317,7 +317,7 @@ export default function Billing() {
       }
 
       const existingIndex = cart.findIndex(
-        (item) => item.inventory_id === matchedItem.id,
+        (item) => item.inventory_id === matchedItem._id,
       );
 
       if (existingIndex >= 0) {
@@ -350,7 +350,7 @@ export default function Billing() {
         setCart((prev) => [
           ...prev,
           {
-            inventory_id: matchedItem.id,
+            inventory_id: matchedItem._id,
             item_name: matchedItem.item_name,
             quantity: data.quantity,
             unit: matchedItem.unit,

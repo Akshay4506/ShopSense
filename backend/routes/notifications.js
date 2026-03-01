@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Inventory = require('../models/Inventory');
 const Bill = require('../models/Bill');
+const { Types: { ObjectId } } = require('mongoose');
 
 router.get('/', async (req, res) => {
     const userId = req.user.id;
@@ -30,7 +31,7 @@ router.get('/', async (req, res) => {
         const profitAgg = await Bill.aggregate([
             {
                 $match: {
-                    user_id: new require('mongoose').Types.ObjectId(userId),
+                    user_id: new ObjectId(userId),
                     created_at: { $gte: thirtyDaysAgo }
                 }
             },

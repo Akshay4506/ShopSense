@@ -99,7 +99,7 @@ npm run dev
 The frontend will typically run at:
 
 ```
-http://localhost:3000
+http://localhost:5173
 ```
 
 ---
