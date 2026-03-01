@@ -40,12 +40,9 @@ export default function Auth() {
 
   const [loading, setLoading] = useState(false);
 
-  // Views: "login", "signup", "login-mobile-send", "login-mobile-verify"
+  // Views: "login", "signup"
   const [view, setView] = useState('login');
-
-  // OTP State
-  const [otp, setOtp] = useState('');
-  const [countdown, setCountdown] = useState(0); // Resend timer
+  const [loginMethod, setLoginMethod] = useState<'email' | 'mobile'>('email');
 
   const { login: authLogin, loginWithToken, user, loading: authLoading } = useAuth(); // Rename to avoid conflict with local loading
   const { toast } = useToast();
@@ -58,23 +55,30 @@ export default function Auth() {
     }
   }, [user, navigate]);
 
-  // Timer logic
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
-  const startTimer = () => setCountdown(60);
-
   // --- Handlers ---
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLoginEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await authLogin(email, password);
+      navigate('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to login',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoginMobile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await authLogin(phone, password);
       navigate('/dashboard');
     } catch (error: any) {
       toast({
@@ -115,53 +119,7 @@ export default function Auth() {
     }
   };
 
-  const handleSendMobileOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone) {
-      toast({
-        variant: 'destructive',
-        title: 'Mobile number required',
-        description: 'Please enter your mobile number.',
-      });
-      return;
-    }
-    setLoading(true);
-    try {
-      await apiClient.post('/auth/send-mobile-otp', { phone });
-      toast({
-        title: 'SMS Sent',
-        description: 'Check your backend console for the DEV login code.',
-      });
-      setView('login-mobile-verify');
-      startTimer();
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to send code',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyMobileOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await apiClient.post('/auth/login-with-mobile-otp', { phone, otp });
-      loginWithToken(res.token, res.user);
-      navigate('/dashboard');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Invalid code',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // OTP flows have been replaced by Password-only login per user request.
 
   if (authLoading) {
     return <CrazyLoader />;
@@ -190,43 +148,23 @@ export default function Auth() {
             </p>
           </div>
         )}
-        {view === 'login-mobile-send' && (
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Login with Mobile
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Enter your mobile number to receive a login code
-            </p>
-          </div>
-        )}
-        {view === 'login-mobile-verify' && (
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Verify Login
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Enter the code sent to {phone}
-            </p>
-          </div>
-        )}
       </div>
 
       <Card className="w-full max-w-[420px] border-border/40 shadow-xl">
         <CardContent className="pt-6">
-          {view === 'login' || view === 'signup' ? (
-            <Tabs
-              value={view}
-              onValueChange={(v) => setView(v)}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Register</TabsTrigger>
-              </TabsList>
+          <Tabs
+            value={view}
+            onValueChange={(v) => setView(v)}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="signup">Register</TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
+            <TabsContent value="login">
+              {loginMethod === 'email' ? (
+                <form onSubmit={handleLoginEmail} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -255,7 +193,7 @@ export default function Auth() {
                       variant="link"
                       className="p-0 h-auto text-muted-foreground"
                       type="button"
-                      onClick={() => setView('login-mobile-send')}
+                      onClick={() => setLoginMethod('mobile')}
                     >
                       Login with Mobile
                     </Button>
@@ -273,89 +211,29 @@ export default function Auth() {
                     )}
                   </Button>
                 </form>
-              </TabsContent>
-
-              <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-3">
+              ) : (
+                <form onSubmit={handleLoginMobile} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="shopkeeperName">Shopkeeper Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="shopkeeperName"
-                        className="pl-9"
-                        placeholder="Your Name"
-                        value={shopkeeperName}
-                        onChange={(e) => setShopkeeperName(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="shopName">Shop Name</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="shopName"
-                        className="pl-9"
-                        placeholder="My Awesome Shop"
-                        value={shopName}
-                        onChange={(e) => setShopName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="login-mobile-phone">Mobile Number</Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="phone"
+                        id="login-mobile-phone"
                         className="pl-9"
                         placeholder="1234567890"
+                        type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Shop Address</Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="address"
-                        className="pl-9"
-                        placeholder="123 Main St, City"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-email"
-                        className="pl-9"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
                         required
                       />
                     </div>
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="login-mobile-password">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="signup-password"
+                        id="login-mobile-password"
                         className="pl-9"
                         type="password"
                         placeholder="••••••••"
@@ -366,6 +244,17 @@ export default function Auth() {
                     </div>
                   </div>
 
+                  <div className="flex items-center justify-between text-sm">
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto text-muted-foreground"
+                      type="button"
+                      onClick={() => setLoginMethod('email')}
+                    >
+                      Login with Email
+                    </Button>
+                  </div>
+
                   <Button
                     className="w-full bg-primary hover:bg-primary/90"
                     type="submit"
@@ -374,113 +263,118 @@ export default function Auth() {
                     {loading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      'Create Account'
+                      'Login'
                     )}
                   </Button>
                 </form>
-              </TabsContent>
-            </Tabs>
-          ) : null}
+              )}
+            </TabsContent>
 
-          {view === 'login-mobile-send' && (
-            <form onSubmit={handleSendMobileOtp} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="login-mobile-phone">Mobile Number</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="login-mobile-phone"
-                    className="pl-9"
-                    placeholder="1234567890"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                  />
+            <TabsContent value="signup">
+              <form onSubmit={handleSignup} className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="shopkeeperName">Shopkeeper Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="shopkeeperName"
+                      className="pl-9"
+                      placeholder="Your Name"
+                      value={shopkeeperName}
+                      onChange={(e) => setShopkeeperName(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              <Button
-                className="w-full"
-                type="submit"
-                disabled={loading || countdown > 0}
-              >
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : countdown > 0 ? (
-                  `Resend in ${countdown}s`
-                ) : (
-                  'Send Verification Code'
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full"
-                type="button"
-                onClick={() => setView('login')}
-              >
-                Back to Login
-              </Button>
-            </form>
-          )}
 
-          {view === 'login-mobile-verify' && (
-            <form onSubmit={handleVerifyMobileOtp} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Mobile Number</Label>
-                <Input value={phone} disabled className="bg-muted" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="login-mobile-code">Verification Code</Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="login-mobile-code"
-                    className="pl-9 tracking-widest font-mono"
-                    placeholder="123456"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    maxLength={6}
-                    required
-                  />
+                <div className="space-y-2">
+                  <Label htmlFor="shopName">Shop Name</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="shopName"
+                      className="pl-9"
+                      placeholder="My Awesome Shop"
+                      value={shopName}
+                      onChange={(e) => setShopName(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <Button className="w-full" type="submit" disabled={loading}>
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  'Verify & Login'
-                )}
-              </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      className="pl-9"
+                      placeholder="1234567890"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
 
-              <div className="text-center text-sm">
-                {countdown > 0 ? (
-                  <span className="text-muted-foreground flex items-center justify-center gap-1">
-                    <Timer className="h-3 w-3" /> Resend available in{' '}
-                    {countdown}s
-                  </span>
-                ) : (
-                  <Button
-                    variant="link"
-                    className="h-auto p-0"
-                    type="button"
-                    onClick={handleSendMobileOtp}
-                  >
-                    Resend Code
-                  </Button>
-                )}
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Shop Address</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="address"
+                      className="pl-9"
+                      placeholder="123 Main St, City"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                    />
+                  </div>
+                </div>
 
-              <Button
-                variant="ghost"
-                className="w-full"
-                type="button"
-                onClick={() => setView('login')}
-              >
-                Back to Login
-              </Button>
-            </form>
-          )}
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-email"
+                      className="pl-9"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-password"
+                      className="pl-9"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full bg-primary hover:bg-primary/90"
+                  type="submit"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    'Create Account'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
