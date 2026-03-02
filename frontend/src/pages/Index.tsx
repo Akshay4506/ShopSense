@@ -38,9 +38,6 @@ export default function Index() {
           <div className="flex items-center gap-2">
             <PWAInstallButton showText={true} />
             <ThemeToggle />
-            <Button onClick={() => navigate(user ? '/dashboard' : '/auth')}>
-              {user ? 'Dashboard' : 'Login'}
-            </Button>
           </div>
         </div>
       </header>
