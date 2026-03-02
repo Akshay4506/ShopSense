@@ -465,7 +465,7 @@ export default function Reports() {
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailySalesData}>
+                <BarChart data={dailySalesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     className="stroke-muted"
@@ -499,7 +499,7 @@ export default function Reports() {
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dailySalesData}>
+                <LineChart data={dailySalesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     className="stroke-muted"
