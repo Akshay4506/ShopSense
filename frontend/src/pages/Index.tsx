@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { PWAInstallButton } from '@/components/PWAInstallButton';
 import {
   Store,
   Package,
@@ -35,6 +36,7 @@ export default function Index() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <PWAInstallButton showText={true} />
             <ThemeToggle />
             <Button onClick={() => navigate(user ? '/dashboard' : '/auth')}>
               {user ? 'Dashboard' : 'Login'}

@@ -17,6 +17,7 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { UserProfile } from '@/components/UserProfile';
+import { PWAInstallButton } from '@/components/PWAInstallButton';
 import {
   Popover,
   PopoverContent,
@@ -156,6 +157,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">ShopSense</h1>
         </div>
         <div className="flex items-center gap-4">
+          <PWAInstallButton showText={false} />
           {/* Notifications Bell */}
           <Popover>
             <PopoverTrigger asChild>
