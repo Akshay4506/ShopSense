@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**ShopSense_WHackiest** is a full-stack web application developed as part of a hackathon initiative. The project simulates a smart and interactive shopping platform that integrates a frontend user interface with a backend server to deliver dynamic content and real-time responses.
+**ShopSense** is a full-stack web application developed as part of a hackathon initiative. The project simulates a smart and interactive shopping platform that integrates a frontend user interface with a backend server to deliver dynamic content and real-time responses.
 
 The application demonstrates how modern web technologies can be combined to create a seamless client-server architecture similar to real-world e-commerce platforms.
 
@@ -46,8 +46,8 @@ ShopSense provides:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/Akshay4506/ShopSense_WHackiest.git
-cd ShopSense_WHackiest
+git clone https://github.com/Akshay4506/ShopSense.git
+cd ShopSense
 ```
 
 ---
