@@ -27,6 +27,14 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import {
   BarChart,
   Bar,
   XAxis,
@@ -45,6 +53,7 @@ import {
   TrendingDown,
   AlertTriangle,
   Loader2,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 
 interface Bill {
@@ -95,6 +104,19 @@ export default function Reports() {
   );
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGstPreviewOpen, setIsGstPreviewOpen] = useState(false);
+
+  const [timeGranularity, setTimeGranularity] = useState('Day-wise');
+  const [subGranularity, setSubGranularity] = useState('Day by Day');
+
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+
+  const filterOptions = {
+    'Custom Date': ['Week of Selected Date'],
+    'Year-wise': ['Yearly Basis', 'Half Yearly Basis', 'Quarterly Basis'],
+    'Month-wise': ['Monthly Basis', 'Half Monthly Basis', 'Weekly Basis'],
+    'Week-wise': ['Weekly Basis'],
+    'Day-wise': ['Day by Day'],
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -191,36 +213,163 @@ export default function Reports() {
     return { todaySales, weekSales, monthSales, totalProfit };
   };
 
-  // Get daily sales data for chart
+  // Get filtered sales data for chart
   const getDailySalesData = (): DailySales[] => {
-    const last7Days: DailySales[] = [];
+    const data: DailySales[] = [];
     const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
 
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const dateStr = date.toDateString();
-      const dayBills = bills.filter(
-        (b) => new Date(b.created_at).toDateString() === dateStr,
-      );
-
-      last7Days.push({
-        date: date.toLocaleDateString('en-IN', {
-          weekday: 'short',
-          day: 'numeric',
-        }),
-        sales: dayBills.reduce(
-          (sum, b) => sum + (Number(b.total_amount) || 0),
-          0,
-        ),
-        profit: dayBills.reduce(
-          (sum, b) =>
-            sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)),
-          0,
-        ),
+    const getBillsInRange = (start: Date, end: Date) => {
+      return bills.filter((b) => {
+        const d = new Date(b.created_at);
+        return d >= start && d <= end;
       });
+    };
+
+    if (timeGranularity === 'Custom Date' && selectedDate) {
+      const d = new Date(selectedDate);
+      const dayOfWeek = d.getDay() || 7;
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - dayOfWeek + 1);
+      monday.setHours(0, 0, 0, 0);
+
+      for (let i = 0; i < 7; i++) {
+        const dStart = new Date(monday);
+        dStart.setDate(monday.getDate() + i);
+        const dEnd = new Date(dStart);
+        dEnd.setHours(23, 59, 59, 999);
+
+        const dBills = getBillsInRange(dStart, dEnd);
+        data.push({
+          date: dStart.toLocaleDateString('en-IN', { weekday: 'short' }),
+          sales: dBills.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0),
+          profit: dBills.reduce((sum, b) => sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)), 0),
+        });
+      }
+    } else if (timeGranularity === 'Year-wise') {
+      if (subGranularity === 'Yearly Basis') {
+        for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+          const yearBills = bills.filter((b) => new Date(b.created_at).getFullYear() === y);
+          data.push({
+            date: y.toString(),
+            sales: yearBills.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0),
+            profit: yearBills.reduce((sum, b) => sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)), 0),
+          });
+        }
+      } else if (subGranularity === 'Half Yearly Basis') {
+        for (let y = currentYear - 2; y <= currentYear; y++) {
+          for (let h = 1; h <= 2; h++) {
+            const hStart = new Date(y, h === 1 ? 0 : 6, 1);
+            const hEnd = new Date(y, h === 1 ? 5 : 11, 31, 23, 59, 59);
+            const halfBills = getBillsInRange(hStart, hEnd);
+            data.push({
+              date: `H${h} ${y}`,
+              sales: halfBills.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0),
+              profit: halfBills.reduce((sum, b) => sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)), 0),
+            });
+          }
+        }
+      } else if (subGranularity === 'Quarterly Basis') {
+        for (let y = currentYear - 1; y <= currentYear; y++) {
+          for (let q = 1; q <= 4; q++) {
+            const qStart = new Date(y, (q - 1) * 3, 1);
+            const qEnd = new Date(y, q * 3, 0, 23, 59, 59);
+            const qBills = getBillsInRange(qStart, qEnd);
+            data.push({
+              date: `Q${q} ${y}`,
+              sales: qBills.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0),
+              profit: qBills.reduce((sum, b) => sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)), 0),
+            });
+          }
+        }
+      }
+    } else if (timeGranularity === 'Month-wise') {
+      if (subGranularity === 'Monthly Basis') {
+        for (let m = 0; m < 12; m++) {
+          const mStart = new Date(currentYear, m, 1);
+          const mEnd = new Date(currentYear, m + 1, 0, 23, 59, 59);
+          const mBills = getBillsInRange(mStart, mEnd);
+          data.push({
+            date: mStart.toLocaleDateString('en-IN', { month: 'short' }),
+            sales: mBills.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0),
+            profit: mBills.reduce((sum, b) => sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)), 0),
+          });
+        }
+      } else if (subGranularity === 'Half Monthly Basis') {
+        const mStart1 = new Date(currentYear, currentMonth, 1);
+        const mEnd1 = new Date(currentYear, currentMonth, 15, 23, 59, 59);
+        const mBills1 = getBillsInRange(mStart1, mEnd1);
+        data.push({
+          date: `1-15 ${mStart1.toLocaleDateString('en-IN', { month: 'short' })}`,
+          sales: mBills1.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0),
+          profit: mBills1.reduce((sum, b) => sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)), 0),
+        });
+
+        const mStart2 = new Date(currentYear, currentMonth, 16);
+        const mEnd2 = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+        const mBills2 = getBillsInRange(mStart2, mEnd2);
+        data.push({
+          date: `16-EOM ${mStart1.toLocaleDateString('en-IN', { month: 'short' })}`,
+          sales: mBills2.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0),
+          profit: mBills2.reduce((sum, b) => sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)), 0),
+        });
+      } else if (subGranularity === 'Weekly Basis') {
+        let currentDay = new Date(currentYear, currentMonth, 1);
+        let week = 1;
+        while (currentDay.getMonth() === currentMonth) {
+          const weekStart = new Date(currentDay);
+          const nextWeek = new Date(currentDay);
+          nextWeek.setDate(currentDay.getDate() + 7);
+          const weekEnd = new Date(Math.min(nextWeek.getTime() - 1, new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).getTime()));
+
+          const wBills = getBillsInRange(weekStart, weekEnd);
+          data.push({
+            date: `Week ${week}`,
+            sales: wBills.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0),
+            profit: wBills.reduce((sum, b) => sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)), 0),
+          });
+          currentDay = new Date(weekEnd.getTime() + 1000);
+          week++;
+        }
+      }
+    } else if (timeGranularity === 'Week-wise') {
+      const dayOfWeek = now.getDay() || 7;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - dayOfWeek + 1);
+      monday.setHours(0, 0, 0, 0);
+
+      for (let i = 0; i < 7; i++) {
+        const dStart = new Date(monday);
+        dStart.setDate(monday.getDate() + i);
+        const dEnd = new Date(dStart);
+        dEnd.setHours(23, 59, 59, 999);
+
+        const dBills = getBillsInRange(dStart, dEnd);
+        data.push({
+          date: dStart.toLocaleDateString('en-IN', { weekday: 'short' }),
+          sales: dBills.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0),
+          profit: dBills.reduce((sum, b) => sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)), 0),
+        });
+      }
+    } else {
+      for (let i = 6; i >= 0; i--) {
+        const dStart = new Date(now);
+        dStart.setDate(now.getDate() - i);
+        dStart.setHours(0, 0, 0, 0);
+        const dEnd = new Date(dStart);
+        dEnd.setHours(23, 59, 59, 999);
+
+        const dBills = getBillsInRange(dStart, dEnd);
+        data.push({
+          date: dStart.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }),
+          sales: dBills.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0),
+          profit: dBills.reduce((sum, b) => sum + ((Number(b.total_amount) || 0) - (Number(b.total_cost) || 0)), 0),
+        });
+      }
     }
 
-    return last7Days;
+    return data;
   };
 
   // Get low stock items
@@ -457,21 +606,87 @@ export default function Reports() {
           </Card>
         </div>
 
+        {/* Filters Row */}
+        <div className="flex flex-wrap gap-4 items-center">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="date"
+                variant={"outline"}
+                className={cn(
+                  "w-[180px] justify-start text-left font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+                onClick={() => {
+                  setTimeGranularity('Custom Date');
+                  setSubGranularity('Week of Selected Date');
+                }}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? (
+                  format(selectedDate, "LLL dd, y")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="single"
+                defaultMonth={selectedDate}
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedDate(date as Date);
+                    setTimeGranularity('Custom Date');
+                    setSubGranularity('Week of Selected Date');
+                  }
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Select
+            value={timeGranularity}
+            onValueChange={(val) => {
+              setTimeGranularity(val);
+              setSubGranularity(filterOptions[val as keyof typeof filterOptions][0]);
+            }}
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Granularity" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.keys(filterOptions).map(opt => (
+                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={subGranularity} onValueChange={setSubGranularity}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Basis" />
+            </SelectTrigger>
+            <SelectContent>
+              {filterOptions[timeGranularity as keyof typeof filterOptions].map(opt => (
+                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Sales Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Last 7 Days Sales</CardTitle>
+            <CardTitle>{subGranularity === 'Day by Day' ? 'Sales Trend' : `${subGranularity} Sales`}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailySalesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    className="stroke-muted"
-                  />
+                <LineChart data={dailySalesData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                   <XAxis dataKey="date" className="text-xs" />
-                  <YAxis className="text-xs" />
+                  <YAxis tick={false} tickLine={false} width={15} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
@@ -479,13 +694,15 @@ export default function Reports() {
                       borderRadius: '8px',
                     }}
                   />
-                  <Bar
+                  <Line
+                    type="monotone"
                     dataKey="sales"
-                    fill="hsl(142, 76%, 36%)"
+                    stroke="hsl(142, 76%, 36%)"
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(142, 76%, 36%)' }}
                     name="Sales (₹)"
-                    radius={[4, 4, 0, 0]}
                   />
-                </BarChart>
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
@@ -494,18 +711,14 @@ export default function Reports() {
         {/* Profit Trend */}
         <Card>
           <CardHeader>
-            <CardTitle>Profit Trend</CardTitle>
+            <CardTitle>{subGranularity === 'Day by Day' ? 'Profit Trend' : `${subGranularity} Profit`}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dailySalesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    className="stroke-muted"
-                  />
+                <LineChart data={dailySalesData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                   <XAxis dataKey="date" className="text-xs" />
-                  <YAxis className="text-xs" />
+                  <YAxis tick={false} tickLine={false} width={15} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',

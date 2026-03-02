@@ -13,10 +13,18 @@ export const apiClient = {
         const response = await fetch(`${API_URL}${endpoint}`, {
             headers: getHeaders(),
         });
-        if (!response.ok) {
-            throw new Error(`API Error: ${response.statusText}`);
+        let result;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            result = await response.json();
+        } else {
+            result = { message: await response.text() };
         }
-        return response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || result.message || `API Error: ${response.statusText}`);
+        }
+        return result;
     },
 
     post: async (endpoint: string, data: any) => {
@@ -31,7 +39,15 @@ export const apiClient = {
                 // handle logout logic if needed
             }
         }
-        const result = await response.json();
+
+        let result;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            result = await response.json();
+        } else {
+            result = { message: await response.text() };
+        }
+
         if (!response.ok) {
             throw new Error(result.error || result.message || 'API Error');
         }
@@ -44,9 +60,16 @@ export const apiClient = {
             headers: getHeaders(),
             body: JSON.stringify(data),
         });
-        const result = await response.json();
+        let result;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            result = await response.json();
+        } else {
+            result = { message: await response.text() };
+        }
+
         if (!response.ok) {
-            throw new Error(result.error || 'API Error');
+            throw new Error(result.error || result.message || 'API Error');
         }
         return result;
     },
@@ -56,9 +79,17 @@ export const apiClient = {
             method: 'DELETE',
             headers: getHeaders(),
         });
-        if (!response.ok) {
-            throw new Error('API Error');
+        let result;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            result = await response.json();
+        } else {
+            result = { message: await response.text() };
         }
-        return response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || result.message || 'API Error');
+        }
+        return result;
     },
 };
