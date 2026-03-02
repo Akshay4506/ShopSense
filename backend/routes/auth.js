@@ -19,10 +19,13 @@ router.post('/register', async (req, res) => {
     const { email, password, shopkeeper_name, shop_name, address, phone } = req.body;
 
     try {
-        // Check if user exists
-        const userExist = await User.findOne({ email });
+        // Check if user exists (email or phone)
+        const userExist = await User.findOne({
+            $or: [{ email }, { phone }]
+        });
         if (userExist) {
-            return res.status(400).json({ error: 'User already exists' });
+            const conflict = userExist.email === email ? 'Email' : 'Phone number';
+            return res.status(400).json({ error: `${conflict} already registered` });
         }
 
         // Hash password
