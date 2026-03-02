@@ -10,9 +10,9 @@ export default defineConfig(() => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'pwa-icon.svg'],
       manifest: {
-        name: 'ShopSense - Smart Dukaan Management',
+        name: 'ShopSense',
         short_name: 'ShopSense',
         description: 'Manage your inventory, billing, and reports with ease.',
         theme_color: '#166534',
@@ -23,7 +23,13 @@ export default defineConfig(() => ({
             src: 'favicon.svg',
             sizes: 'any',
             type: 'image/svg+xml',
-            purpose: 'any maskable',
+            purpose: 'any',
+          },
+          {
+            src: 'pwa-icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'maskable',
           },
         ],
       },
